@@ -15,59 +15,84 @@ const registerUser = asyncHandler( async(req, res) => {
    // check user creation
    // return res
 
-
-
     const  { fullName, email, username, password} = req.body 
     console.log("email: ", email); 
 
+    console.log(req.body)
 
-    if (!fullName || fullName.trim( )=== ""){
-        throw new ApiError(400, "Full name is required", )
+    // Fixed validation - check for empty string, not just space
+    if (!fullName || fullName.trim() === ""){
+        throw new ApiError(400, "Full name is required")
     }
 
+    // Add validation for other required fields
+    if (!email || email.trim() === ""){
+        throw new ApiError(400, "Email is required")
+    }
+    
+    if (!username || username.trim() === ""){
+        throw new ApiError(400, "Username is required")
+    }
+    
+    if (!password || password.trim() === ""){
+        throw new ApiError(400, "Password is required")
+    }
 
-    const existUser = username.findone({
+    // Fixed: Use User.findOne instead of username.findone
+    const existUser = await User.findOne({
         $or: [{ username }, { email }]
     });
 
     if (existUser){
         throw new ApiError(409, "User with email or username already exist")
     }
+    // console.log(req.files)
+
 
     const avatarLocalPath = req.files?.avatar?.[0]?.path;
-
-   const coverImageLocalPath =  req.files?.coverImage?.[0]?.path
-
-   if (!avatarLocalPath){
-    throw new ApiError(400, "Avatar file is required")
-   }
-
-  const avatar =  await uploadOnCloudinary( avatarLocalPath)
-  const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+    // const coverImageLocalPath = req.files?.coverImage?.[0]?.path
   
-  if(!avatar){
-    throw new ApiError(400, "Avatar is required")
-  }
+    // i don't understand this - another method 
+    let coverImageLocalPath;
+    if(req.files && Array.isArray ( req.files.coverImage) &&  req.files.coverImage.length > 0) {
+        coverImageLocalPath = req.files.coverImage[0].coverImageLocalPath
+    }
 
- const user = await User.create({
-    fullName,
-    avatar: avatar.url,
-    coverImage: coverImage?.url || "",
-    email,
-    password,
-    username: username.tolowercase()
-  })
 
- const createdUser = await User.findById(user._id).select("-password -refreshToken")
 
- if (!createdUser){
-    throw new ApiError( 500, "server went wrong while user register")
- }
 
- return res.status.status(201).json(
-    new ApiResponse(200, createdUser, "user registerd successfully")
- )
 
+    if (!avatarLocalPath){
+        throw new ApiError(400, "Avatar file is required")
+    }
+
+    const avatar = await uploadOnCloudinary(avatarLocalPath)
+    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
+  
+    if(!avatar){
+        throw new ApiError(400, "Avatar is required")
+    }
+
+    // Fixed: Use toLowerCase() instead of tolowercase()
+    const user = await User.create({
+        fullName,
+        avatar: avatar.url,
+        coverImage: coverImage?.url || "",
+        email,
+        password,
+        username: username.toLowerCase()
+    })
+
+    const createdUser = await User.findById(user._id).select("-password -refreshToken")
+
+    if (!createdUser){
+        throw new ApiError(500, "Server went wrong while user register")
+    }
+
+    // Fixed: Remove duplicate .status and fix status code consistency
+    return res.status(201).json(
+        new ApiResponse(200, createdUser, "User registered successfully")
+    )
 })
 
 export { registerUser}
