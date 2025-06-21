@@ -1,19 +1,29 @@
 // require ('dotenv').config({path: './env'})
-import dotenv from "dotenv"
-import connectDB from "./db/index.js"
+import dotenv from "dotenv";
+import connectDB from "./db/index.js";
+import app from './app.js'
 
-dotenv.config( { path: './env'})
+dotenv.config({ path: "./env" });
 
-
-connectDB()
-
-
+const PORT = process.env.PORT || 8000
 
 
+;( async () => {
+ try { 
+    await connectDB()
 
+app.on("error",  (err) => {
+    console.log("App error", err)
+})
 
-
-
+app.listen( PORT, () => {
+    console.log(`App is listening on ${PORT}`)
+})
+} catch (err){
+    console.log("Startp error", err)
+    process.exit(1);
+}
+}) ();
 
 
 
